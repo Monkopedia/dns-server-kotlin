@@ -1,8 +1,42 @@
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import kotlin.concurrent.thread
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
+@OptIn(ExperimentalSerializationApi::class)
 fun main(args: Array<String>) {
-    val resolver = args.getOrNull(1)
+    var hosts = mapOf<String, ByteArray>()
+    thread {
+        val json = Json {
+            isLenient = true
+            allowComments = true
+            ignoreUnknownKeys = true
+            allowTrailingComma = true
+        }
+        runCatching {
+            println("Waiting for hosts...")
+            System.`in`.bufferedReader().lineSequence().map {
+                json.decodeFromString<List<HostEntry>>(it)
+            }.forEach { entries ->
+                hosts = entries.associate { entry ->
+                    entry.host.lowercase() to entry.ip.split(".").map { it.toInt().toByte() }
+                        .toByteArray()
+                }
+                println(
+                    "Updated hosts to [\n    ${
+                        hosts.entries.joinToString("\n    ") {
+                            "${it.key}=${it.value.joinToString(".") { it.toUByte().toString() }}"
+                        }
+                    }\n]"
+                )
+            }
+        }.onFailure {
+            it.printStackTrace()
+        }
+    }
     try {
         val serverSocket = DatagramSocket(2053)
         while (true) {
@@ -11,7 +45,7 @@ fun main(args: Array<String>) {
             serverSocket.receive(packet)
 
             val parsed = packet.data.toDomain()
-            val response = handlePacket(resolver, parsed)
+            val response = handlePacket(hosts, parsed)
             val responsePacket = response.toPacket()
 
             val packetResponse =
@@ -23,3 +57,6 @@ fun main(args: Array<String>) {
         println("Exception: $e")
     }
 }
+
+@Serializable
+data class HostEntry(val host: String, val ip: String)

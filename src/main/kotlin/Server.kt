@@ -1,15 +1,12 @@
 import DNSHeader.RCode
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.net.InetAddress
 
-fun handlePacket(resolver: String?, parsed: DNSPacket): DNSPacket {
+fun handlePacket(hosts: Map<String, ByteArray>, parsed: DNSPacket): DNSPacket {
     val rcode = if (parsed.header.opcode == 0.toByte()) {
         RCode.NO_ERROR
     } else {
         RCode.NOT_IMPLEMENTED
     }
-    val answers = parsed.questions.flatMap { handleQuestion(resolver, parsed.header, it) }
+    val answers = parsed.questions.flatMap { handleQuestion(hosts, it) }
     return DNSPacket(
         header = parsed.header.copy(qr = true, rcode = rcode, ancount = answers.size.toShort()),
         questions = parsed.questions,
@@ -19,39 +16,26 @@ fun handlePacket(resolver: String?, parsed: DNSPacket): DNSPacket {
     )
 }
 
-fun handleQuestion(resolver: String?, header: DNSHeader, question: DNSQuestion): List<DNSRecord> {
-    if (resolver != null && header.rd) {
-        val answers = resolve(resolver, header, question)
-        if (answers.isNotEmpty()) {
-            return answers
-        }
+fun handleQuestion(hosts: Map<String, ByteArray>, question: DNSQuestion): List<DNSRecord> {
+    val query = when (question.name.size) {
+        1 -> listOf(question.name.single(), "local")
+        2 -> question.name.takeIf { it[1] == "local" } ?: return emptyList()
+        else -> return emptyList()
     }
-    // TODO this is a default answer to pass earlier stages.
+    println("Checking local query ${query.joinToString(".")}")
+    val ip = hosts[query.first().lowercase()] ?: return emptyList()
+    println(
+        "Returning ${query.joinToString(".")} -> ${
+            ip.joinToString(".") { it.toUByte().toString() }
+        }"
+    )
     return listOf(
         DNSRecord(
-            name = question.name,
+            name = query,
             type = DNSType.A,
             klass = DNSClass.IN,
             ttl = 60,
-            data = byteArrayOf(127, 0, 0, 1)
+            data = ip
         )
     )
-}
-
-fun resolve(resolver: String, header: DNSHeader, question: DNSQuestion): List<DNSRecord> {
-    val parts = resolver.split(":")
-    val host = parts[0]
-    val port = parts.getOrElse(1) { "53" }.toInt()
-
-    val socket = DatagramSocket()
-    val buf = DNSPacket(header, question).toPacket()
-    val datagram = DatagramPacket(buf, buf.size, InetAddress.getByName(host), port)
-    socket.send(datagram)
-
-    val responseBuf = ByteArray(512)
-    val responsePacket = DatagramPacket(responseBuf, responseBuf.size)
-    socket.receive(responsePacket)
-
-    val parsed = responsePacket.data.toDomain()
-    return parsed.answers
 }

@@ -16,9 +16,11 @@ fun parseQuestion(buffer: ByteBuffer): DNSQuestion {
     val name = parseName(buffer)
     val type = buffer.short
     val klass = buffer.short
-    return DNSQuestion(name,
+    return DNSQuestion(
+        name,
         DNSType.entries.first { it.value == type },
-        DNSClass.entries.first { it.value == klass })
+        DNSClass.entries.first { it.value == klass }
+    )
 }
 
 fun parseRecord(buffer: ByteBuffer): DNSRecord {
@@ -42,7 +44,6 @@ fun parseName(buffer: ByteBuffer): List<String> {
     val labels = mutableListOf<String>()
     var length = buffer.get()
     while (length != 0x00.toByte()) {
-
         if ((length.toInt() and 0b11000000) > 0) {
             // Pointer
             val nextByte = buffer.get()
