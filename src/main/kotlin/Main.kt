@@ -19,9 +19,9 @@ fun main(args: Array<String>) {
         runCatching {
             println("Waiting for hosts...")
             System.`in`.bufferedReader().lineSequence().map {
-                json.decodeFromString<List<HostEntry>>(it)
+                json.decodeFromString<InputObject>(it)
             }.forEach { entries ->
-                hosts = entries.associate { entry ->
+                hosts = entries.hosts.associate { entry ->
                     entry.host.lowercase() to entry.ip.split(".").map { it.toInt().toByte() }
                         .toByteArray()
                 }
@@ -57,6 +57,9 @@ fun main(args: Array<String>) {
         println("Exception: $e")
     }
 }
+
+@Serializable
+data class InputObject(val hosts: List<HostEntry>)
 
 @Serializable
 data class HostEntry(val host: String, val ip: String)
