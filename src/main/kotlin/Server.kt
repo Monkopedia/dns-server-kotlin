@@ -19,7 +19,8 @@ fun handlePacket(hosts: Map<String, ByteArray>, parsed: DNSPacket): DNSPacket {
 fun handleQuestion(hosts: Map<String, ByteArray>, question: DNSQuestion): List<DNSRecord> {
     val query = when (question.name.size) {
         1 -> question.name.single()
-        2 -> question.name.first()
+        2 -> question.name.first().takeIf { question.name[1] != "local" }
+          ?: return emptyList()
         else -> return emptyList<DNSRecord>().also {
             println("Ignoring non-local query ${question.name.joinToString(".")}")
         }
