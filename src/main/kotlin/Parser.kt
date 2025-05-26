@@ -7,19 +7,19 @@ import kotlin.experimental.and
 fun ByteArray.toDomain(): DNSPacket {
     val buffer = ByteBuffer.wrap(this).order(ByteOrder.BIG_ENDIAN)
     val header = parseHeader(buffer)
-    val questions = (0 until header.qdcount).map { parseQuestion(buffer) }
+    val questions = (0 until header.qdcount).mapNotNull { parseQuestion(buffer) }
     val answers = (0 until header.ancount).map { parseRecord(buffer) }
     return DNSPacket(header, questions, answers, listOf(), listOf())
 }
 
-fun parseQuestion(buffer: ByteBuffer): DNSQuestion {
+fun parseQuestion(buffer: ByteBuffer): DNSQuestion? {
     val name = parseName(buffer)
     val type = buffer.short
     val klass = buffer.short
     return DNSQuestion(
         name,
-        DNSType.entries.first { it.value == type },
-        DNSClass.entries.first { it.value == klass }
+        DNSType.entries.firstOrNull { it.value == type } ?: return null,
+        DNSClass.entries.firstOrNull { it.value == klass } ?: return null
     )
 }
 

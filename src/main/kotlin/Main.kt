@@ -38,7 +38,7 @@ fun main(args: Array<String>) {
         }
     }
     try {
-        val serverSocket = DatagramSocket(2053)
+        val serverSocket = DatagramSocket(8053)
         while (true) {
             val buf = ByteArray(512)
             val packet = DatagramPacket(buf, buf.size)

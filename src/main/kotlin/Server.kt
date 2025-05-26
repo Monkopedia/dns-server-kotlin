@@ -18,20 +18,18 @@ fun handlePacket(hosts: Map<String, ByteArray>, parsed: DNSPacket): DNSPacket {
 
 fun handleQuestion(hosts: Map<String, ByteArray>, question: DNSQuestion): List<DNSRecord> {
     val query = when (question.name.size) {
-        1 -> listOf(question.name.single(), "local")
-        2 -> question.name.takeIf { it[1] == "local" } ?: return emptyList()
-        else -> return emptyList()
+        1 -> question.name.single()
+        2 -> question.name.first()
+        else -> return emptyList<DNSRecord>().also {
+            println("Ignoring non-local query ${question.name.joinToString(".")}")
+        }
     }
-    println("Checking local query ${query.joinToString(".")}")
-    val ip = hosts[query.first().lowercase()] ?: return emptyList()
-    println(
-        "Returning ${query.joinToString(".")} -> ${
-            ip.joinToString(".") { it.toUByte().toString() }
-        }"
-    )
+    println("Checking local query ${query}")
+    val ip = hosts[query.lowercase()] ?: return emptyList()
+    println("Returning $query -> ${ip.joinToString(".") { it.toUByte().toString() }}")
     return listOf(
         DNSRecord(
-            name = query,
+            name = question.name,
             type = DNSType.A,
             klass = DNSClass.IN,
             ttl = 60,
