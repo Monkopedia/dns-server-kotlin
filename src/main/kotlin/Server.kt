@@ -4,8 +4,9 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import kotlin.concurrent.getOrSet
 
-fun handlePacket(
+suspend fun handlePacket(
     packet: DatagramPacket,
     hosts: Map<String, ByteArray>,
     parsed: DNSPacket
@@ -27,8 +28,11 @@ fun handlePacket(
     ).toPacket()
 }
 
-fun relayUpstream(packet: DatagramPacket): ByteArray {
-    val upstream = DatagramSocket()
+val upstream = ThreadLocal<DatagramSocket>()
+
+suspend fun relayUpstream(packet: DatagramPacket): ByteArray {
+    val upstream = upstream.getOrSet { DatagramSocket() }
+    upstream.soTimeout = 30_000
     upstream.send(
         DatagramPacket(packet.data, packet.data.size, InetSocketAddress("192.168.68.2", 8053))
     )

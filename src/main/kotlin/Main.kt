@@ -1,14 +1,17 @@
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalSerializationApi::class)
-fun main(args: Array<String>) {
+fun main(args: Array<String>) = runBlocking {
     var hosts = mapOf<String, ByteArray>()
-    thread {
+    launch(Dispatchers.IO) {
         val json = Json {
             isLenient = true
             allowComments = true
@@ -43,7 +46,7 @@ fun main(args: Array<String>) {
             val packet = DatagramPacket(buf, buf.size)
             serverSocket.receive(packet)
 
-            thread {
+            launch(Dispatchers.IO) {
                 val parsed = packet.data.toDomain()
                 val responsePacket = handlePacket(packet, hosts, parsed)
 
