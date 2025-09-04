@@ -36,7 +36,6 @@ data class DNSHeader(
     val nscount: Short, // Authority Record Count
     val arcount: Short
 ) {
-
     enum class RCode(val value: HalfByte) {
         UNKNOWN(-1),
         NO_ERROR(0),

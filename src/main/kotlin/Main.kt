@@ -3,7 +3,6 @@ import java.net.DatagramSocket
 import kotlin.concurrent.thread
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -22,8 +21,8 @@ fun main(args: Array<String>) {
                 json.decodeFromString<InputObject>(it)
             }.forEach { entries ->
                 hosts = entries.hosts.associate { entry ->
-                    entry.host.lowercase() to entry.ip.split(".").map { it.toInt().toByte() }
-                        .toByteArray()
+                    entry.host.lowercase() to
+                        entry.ip.split(".").map { it.toInt().toByte() }.toByteArray()
                 }
                 println(
                     "Updated hosts to [\n    ${
@@ -38,19 +37,20 @@ fun main(args: Array<String>) {
         }
     }
     try {
-        val serverSocket = DatagramSocket(8053)
+        val serverSocket = DatagramSocket(53)
         while (true) {
             val buf = ByteArray(512)
             val packet = DatagramPacket(buf, buf.size)
             serverSocket.receive(packet)
 
-            val parsed = packet.data.toDomain()
-            val response = handlePacket(hosts, parsed)
-            val responsePacket = response.toPacket()
+            thread {
+                val parsed = packet.data.toDomain()
+                val responsePacket = handlePacket(packet, hosts, parsed)
 
-            val packetResponse =
-                DatagramPacket(responsePacket, responsePacket.size, packet.socketAddress)
-            serverSocket.send(packetResponse)
+                val packetResponse =
+                    DatagramPacket(responsePacket, responsePacket.size, packet.socketAddress)
+                serverSocket.send(packetResponse)
+            }
         }
     } catch (e: Exception) {
         e.printStackTrace()
