@@ -2,3 +2,4 @@ java_dns.jar
 target/*
 target/
 .idea/build/
+build/
