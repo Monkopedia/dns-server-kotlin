@@ -1,5 +1,6 @@
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.ServerSocket
 import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,6 +38,13 @@ fun main(args: Array<String>) = runBlocking {
             }
         }.onFailure {
             it.printStackTrace()
+        }
+    }
+    launch(Dispatchers.IO) {
+        val tcpServer = ServerSocket(53)
+        while (true) {
+            val client = tcpServer.accept()
+            launch(Dispatchers.IO) { handleTcpClient(client, hosts) }
         }
     }
     try {
