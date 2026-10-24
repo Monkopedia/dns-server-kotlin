@@ -42,7 +42,7 @@ fun main(args: Array<String>) = runBlocking {
     try {
         val serverSocket = DatagramSocket(53)
         while (true) {
-            val buf = ByteArray(512)
+            val buf = ByteArray(4096)
             val packet = DatagramPacket(buf, buf.size)
             serverSocket.receive(packet)
 

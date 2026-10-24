@@ -38,12 +38,12 @@ suspend fun relayUpstream(packet: DatagramPacket): ByteArray {
         val upstream = upstream.getOrSet { DatagramSocket() }
         upstream.soTimeout = 30_000
         upstream.send(
-            DatagramPacket(packet.data, packet.data.size, InetSocketAddress("192.168.68.2", 8053))
+            DatagramPacket(packet.data, packet.length, InetSocketAddress("192.168.68.2", 8053))
         )
-        val buf = ByteArray(512)
+        val buf = ByteArray(4096)
         val packet = DatagramPacket(buf, buf.size)
         upstream.receive(packet)
-        return packet.data
+        return packet.data.copyOf(packet.length)
     } catch (t: IOException) {
         runCatching { upstream.get()?.close() }
         upstream.set(null)

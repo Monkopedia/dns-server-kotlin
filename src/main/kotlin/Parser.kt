@@ -94,11 +94,12 @@ fun parseHeader(buffer: ByteBuffer): DNSHeader {
 }
 
 fun DNSPacket.toPacket(): ByteArray {
-    val buffer = ByteBuffer.allocate(512).order(ByteOrder.BIG_ENDIAN)
+    val buffer = ByteBuffer.allocate(4096).order(ByteOrder.BIG_ENDIAN)
     writeHeader(this.header, buffer)
     this.questions.forEach { writeQuestion(it, buffer) }
     this.answers.forEach { writeRecord(it, buffer) }
-    return buffer.rewind().array()
+    val len = buffer.position()
+    return buffer.array().copyOf(len)
 }
 
 fun writeHeader(header: DNSHeader, buffer: ByteBuffer) {
