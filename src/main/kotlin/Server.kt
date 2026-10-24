@@ -1,10 +1,13 @@
 import DNSHeader.RCode
+import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import jdk.internal.net.http.common.Cancelable
 import kotlin.concurrent.getOrSet
+import kotlin.coroutines.cancellation.CancellationException
 
 suspend fun handlePacket(
     packet: DatagramPacket,
@@ -31,15 +34,21 @@ suspend fun handlePacket(
 val upstream = ThreadLocal<DatagramSocket>()
 
 suspend fun relayUpstream(packet: DatagramPacket): ByteArray {
-    val upstream = upstream.getOrSet { DatagramSocket() }
-    upstream.soTimeout = 30_000
-    upstream.send(
-        DatagramPacket(packet.data, packet.data.size, InetSocketAddress("192.168.68.2", 8053))
-    )
-    val buf = ByteArray(512)
-    val packet = DatagramPacket(buf, buf.size)
-    upstream.receive(packet)
-    return packet.data
+    try {
+        val upstream = upstream.getOrSet { DatagramSocket() }
+        upstream.soTimeout = 30_000
+        upstream.send(
+            DatagramPacket(packet.data, packet.data.size, InetSocketAddress("192.168.68.2", 8053))
+        )
+        val buf = ByteArray(512)
+        val packet = DatagramPacket(buf, buf.size)
+        upstream.receive(packet)
+        return packet.data
+    } catch (t: IOException) {
+        runCatching { upstream.get()?.close() }
+        upstream.set(null)
+        throw CancellationException()
+    }
 }
 
 fun handleQuestion(hosts: Map<String, ByteArray>, question: DNSQuestion): List<DNSRecord> {
